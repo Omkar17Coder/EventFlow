@@ -2,7 +2,7 @@ package queue_test
 
 import (
 	"errors"
-	"learningGolang/internal/dispatcher/config"
+	"learningGolang/internal/config"
 	"learningGolang/internal/queue"
 	"learningGolang/metrics"
 	"learningGolang/pkg/message"
