@@ -1,4 +1,3 @@
-
 package config
 
 import "time"
@@ -14,11 +13,10 @@ type QueueConfig struct {
 //*
 func DefaultQueueConfig() QueueConfig {
 	return QueueConfig{
-		MaxSize:          1000,
-		InitialBackoff:   10 * time.Millisecond,
-		MaxBackoff:       1 * time.Second,
-		BackoffFactor:    1.5,
-		MaxRetryAttempts: 5,
+		MaxSize:          10000,
+		InitialBackoff:   5 * time.Millisecond,
+		MaxBackoff:       500 * time.Millisecond,
+		BackoffFactor:    1.2,
+		MaxRetryAttempts: 3,
 	}
 }
-

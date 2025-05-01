@@ -1,21 +1,23 @@
 # EventFlow: Distributed Event Processing System
 
-EventFlow is a high-performance, distributed event processing system built in Go, designed to handle complex event routing with robust retry mechanisms and persistent storage capabilities.
+EventFlow is a high-performance, distributed event processing system built in Go, designed to handle complex event routing with robust retry mechanisms, persistent storage capabilities, and dynamic worker scaling.
 
 ## System Overview
 
 ### Message Flow
 1. Messages enter through the Common Queue
-2. Messages are distributed to specific Topic Queues
-3. If Topic Queues are full:
-   - Messages go to Retry Queue
-   - Retry attempts are tracked
-   - Exponential backoff is applied
-4. After max retries or when retry queue is full:
-   - Messages are moved to Secondary (Persistent) Storage
+2. Dispatcher routes messages to specific Topic Queues (API, DB, Email)
+3. If insertion into Topic Queue fails:
+   - Messages are moved to Retry Queue
+   - Retry attempts are tracked with exponential backoff
+   - Each retry attempts to insert into the respective channel
+4. After multiple retry failures:
+   - Messages are stored in persistent file storage
+   - System triggers worker upscaling for the affected channel
 5. Failed messages can be:
    - Retried with exponential backoff
-   - Declared dead after max attempts
+   - Stored in file storage for later processing
+   - Trigger worker scaling for improved processing
 
 ## Architecture
 
@@ -48,8 +50,8 @@ AND Queue not full?
    │         │
    │         ▼
    │    ┌─────────────┐
-   │    │ Secondary   │
-   │    │ Storage     │
+   │    │  File      │
+   │    │ Storage    │
    │    └─────────────┘
    │
    ▼
@@ -63,11 +65,14 @@ with exp. backoff
 - **Common Queue**
   - Central entry point for all messages
   - Initial message validation and routing
+  - Real-time monitoring of queue metrics
 
 - **Topic Queues**
-  - Dedicated queues for different services (API, DB, Email)
-  - Configurable queue sizes
-  - Independent processing rates
+  - Implemented dedicated queues for API, DB, and Email services
+  - Individual monitoring systems for each queue
+  - Configurable queue sizes and processing rates
+  - Dynamic worker scaling based on queue load
+  - Independent channel management for each service
 
 ### Retry Mechanism
 - **Smart Retry Queue**
@@ -75,42 +80,63 @@ with exp. backoff
   - Retry count tracking
   - Configurable maximum retries
   - Queue size monitoring
+  - Automatic worker scaling during high retry loads
+  - Persistent retry attempts with file storage backup
 
 ### Persistence Layer
-- **Secondary Storage**
+- **File Storage**
   - Persistent storage for messages that exceed retry limits
   - Storage for messages when retry queue is full
   - Message recovery capabilities
   - Audit trail for failed messages
+  - Automatic message archival
 
-### Monitoring
-- **Metrics Collection**
+### Monitoring and Scaling
+- **Individual Queue Monitoring**
+  - Real-time metrics for each topic queue (API, DB, Email)
   - Queue sizes and capacities
-  - Retry attempts and failures
   - Processing latencies
-  - Storage utilization
+  - Error rates and retry counts
+  - Worker performance metrics
 
+- **Dynamic Worker Scaling**
+  - Automatic worker scaling based on queue load
+  - Configurable scaling thresholds
+  - Resource utilization optimization
+  - Health monitoring of worker instances
+  - Channel-specific scaling triggers
 
-
+## Recent Updates
+- Implemented dedicated topic queues for API, DB, and Email services
+- Added individual monitoring systems for each queue
+- Enhanced retry mechanism with file storage backup
+- Implemented automatic worker scaling based on retry failures
+- Improved message persistence with file storage
+- Added channel-specific monitoring and scaling
 
 ## Roadmap
 
-### Phase 1 (Completed)
+###  (Completed)
 - [x] Basic queue implementation
 - [x] Metrics collection
 - [x] Basic dispatcher
+- [x] Queue monitoring
+- [x] Worker scaling
+- [x] Topic queue implementation
+- [x] File storage integration
+- [x] Enhanced retry queue with exponential backoff
 
-### Phase 2 (Current)
-- [ ] Topic queue implementation
-- [ ] Retry queue with exponential backoff
-- [ ] Secondary storage integration
 
+### TO DO 
+
+- [] Write tests for disatcher function
 ### Future
 - [ ] Web dashboard
-- [ ] Dead letter queue
-- [ ] Message prioritization
-- [ ] Circuit breaker implementation
-- [ ] Distributed deployment support
+- [ ] Using time Series database like Influx Db for enhanced montitoring 
+- [ ] Seperate Monitoring Service
+- [ ] 
+- [ ] Improved storage integration
+
 
 ## Contributing
 

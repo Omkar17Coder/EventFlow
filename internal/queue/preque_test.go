@@ -25,7 +25,9 @@ func TestQueueBasicOperation(t *testing.T) {
 	assert.NoError(t, err)
 	defer queue.Close()
 
-	msg := message.NewMessage("1", "API", "Message 1 to API")
+	msg, err := message.NewMessage("1", "API", "Message from API")
+	assert.NoError(t, err)
+
 	err = queue.Enqueue(msg)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, queue.Size())
@@ -42,7 +44,9 @@ func TestRaiseErrorWhenEnquedOnClosedChannel(t *testing.T) {
 	assert.NoError(t, err)
 	ErrorMessage := errors.New("queue is closed")
 	queue.Close()
-	err = queue.Enqueue(message.NewMessage("2", "API", "DEMO"))
+	message, err := message.NewMessage("2", "API", "Message from API")
+	assert.NoError(t, err)
+	err = queue.Enqueue(message)
 	assert.Equal(t, ErrorMessage, err)
 }
 
@@ -61,8 +65,10 @@ func TestQueueFullAndNotClearedBeforeMaxRetry(t *testing.T) {
 	queue, err := queue.NewQueue(config, *metrics)
 	assert.NoError(t, err)
 	defer queue.Close()
-	msg1 := message.NewMessage("1", "API", "payload1")
-	msg2 := message.NewMessage("2", "DB", "payload2")
+	msg1, err := message.NewMessage("1", "API", "payload1")
+	assert.NoError(t, err)
+	msg2, err := message.NewMessage("2", "DB", "payload2")
+	assert.NoError(t, err)
 
 	err = queue.Enqueue(msg1)
 	assert.NoError(t, err)

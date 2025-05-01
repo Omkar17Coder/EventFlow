@@ -24,7 +24,7 @@ type QueueConfig struct {
 }
 
 type Queue struct {
-	messagesList  chan *message.Message
+	MessagesList  chan message.Message
 	config        QueueConfig
 	metrics       *metrics.QueueMetrics
 	mu            sync.RWMutex
@@ -40,7 +40,7 @@ func NewQueue(config QueueConfig, metrics metrics.QueueMetrics) (*Queue, error) 
 	}
 
 	return &Queue{
-		messagesList: make(chan *message.Message, config.MaxSize),
+		MessagesList: make(chan message.Message, config.MaxSize),
 		config:       config,
 		metrics:      &metrics,
 		done:         make(chan struct{}),
@@ -50,68 +50,47 @@ func NewQueue(config QueueConfig, metrics metrics.QueueMetrics) (*Queue, error) 
 func (q *Queue) Enqueue(msg *message.Message) error {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
-	// read lock.
 	select {
 	case <-q.done:
 		return ErrQueueClosed
+	case q.MessagesList <- *msg:
+		q.metrics.MessagesQueued.Add(1)
+		return nil
 	default:
-
+		return ErrQueueFull
 	}
-	backoff := q.config.MaxBackoff
-	attempt := 0
-
-	for {
-		select {
-		case <-q.done:
-			return ErrQueueClosed
-
-		case q.messagesList <- msg:
-			q.metrics.MessagesQueued.Add(1)
-
-			return nil
-		default:
-			attempt++
-			if attempt > q.config.MaxRetryAttempts {
-				q.metrics.EnqueueRetriesExhausted.Add(1)
-				return ErrMaxRetry
-			}
-			q.metrics.EnqueueRetries.Inc()
-			time.Sleep(backoff)
-			backoff = time.Duration(float64(backoff) * q.config.BackoffFactor)
-			if backoff > q.config.MaxBackoff {
-				backoff = q.config.MaxBackoff
-			}
-		}
-	}
-
 }
 
 func (q *Queue) Dequeue() (*message.Message, bool) {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
 	select {
 	case <-q.done:
 		return nil, false
-	case msg, ok := <-q.messagesList:
+	case msg, ok := <-q.MessagesList:
 		if ok {
 			q.metrics.MessagesDequeued.Add(1)
 		}
-		return msg, ok
+		return &msg, ok
 	default:
 		return nil, false
 	}
 }
 func (q *Queue) Close() {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	q.closeOnce.Do(func() {
 		q.mu.Lock()
 		close(q.done)
 		q.mu.Unlock()
-		close(q.messagesList)
+		close(q.MessagesList)
 	})
 }
 
 func (q *Queue) Size() int {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
-	return len(q.messagesList)
+	return len(q.MessagesList)
 }
 
 // func (q *Queue) Capacity() int {
