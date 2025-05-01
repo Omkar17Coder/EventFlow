@@ -129,12 +129,12 @@ with exp. backoff
 
 ### TO DO 
 
-- [] Write tests for disatcher function
+- [ ] Write tests for disatcher function
+- [ ] Load Testing using Grafana k6 
 ### Future
 - [ ] Web dashboard
 - [ ] Using time Series database like Influx Db for enhanced montitoring 
 - [ ] Seperate Monitoring Service
-- [ ] 
 - [ ] Improved storage integration
 
 
